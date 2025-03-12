@@ -23,61 +23,70 @@
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 TIM_HandleTypeDef htim8;
+DMA_HandleTypeDef hdma_tim1_ch1;
 
-TIM_OC_InitTypeDef sConfigOC;
-/* TIM6 init function */
+/* TIM1 init function */
 void MX_TIM1_Init(void)
 {
-  RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;
-  // Настройка таймера прескалера для получения
-  // частоты тактов счетчика 1 МГц:
-  uint16_t Prescaler = (uint16_t) (SystemCoreClock / 1000000) - 1;
-   
-  // Выбор режима счета вверх:
-  TIM1->CR1 &= ~(TIM_CR1_DIR | TIM_CR1_CMS);
-  TIM1->CR1 |= TIM_COUNTERMODE_UP;
-  TIM1->CR1 &= ~TIM_CR1_CKD;
-  // Установка деления тактов на 1:
-  TIM1->CR1 |= TIM_CLOCKDIVISION_DIV1;
-   
-  // Установка значения автозагрузки счетчика:
-  TIM1->ARR = 1000;
-  // Установка значения длительности импульса:
-  TIM1->CCR1 = 500;
-  // Установка значения прескалера:
-  TIM1->PSC = Prescaler;
-  // Установка значения счетчика повторений:
-  TIM1->RCR = 500 - 1;
-   
-  // Генерация события обновления для немедленной
-  // перезагрузки прескалера и счетчика повторений:
-  TIM1->EGR = TIM_EGR_UG;
-  // Сброс регистра SMCR:
-  TIM1->SMCR = RESET;
-   
-  // Выбор режима OPM:
-  TIM1->CR1 |= TIM_CR1_OPM;
-  TIM1->CCMR1 &= (uint16_t)~TIM_CCMR1_OC1M;
-  TIM1->CCMR1 &= (uint16_t)~TIM_CCMR1_CC1S;
-  TIM1->CCMR1 |= TIM_OCMODE_PWM2;
-   
-  // Выбор канала 1 и режима Output Compare:
-  TIM1->CCER &= (uint16_t)~TIM_CCER_CC1P;
-  // Установка полярности Output Compare:
-  TIM1->CCER |= TIM_OCPOLARITY_HIGH;
-  // Разрешение выхода Compare канала 1:
-  TIM1->CCER = TIM_CCER_CC1E;
-  // Разрешение основного выхода таймера: 
-  TIM1->BDTR |= TIM_BDTR_MOE;
-  // Разрешение периферийного устройства таймера:
- // TIM1->CR1 |= TIM_CR1_CEN;
-  TIM1->CR1 &= ~TIM_CR1_CEN;
-}
 
+  /* USER CODE BEGIN TIM1_Init 0 */
+  uint16_t Tim1Prescaler = (uint16_t) (SystemCoreClock / 32000000) - 1;
+  // Конфигурирование периода:
+  TIM1->ARR = 0xFFFF;
+  // Конфигурирование прескалера таймера:
+  TIM1->PSC = Tim1Prescaler;
+  // Конфигурирование ширины импульса:
+  TIM1->CCR1 = 0xFFF;
+  // Выбор коэффициента деления 1. Сброс поля
+  // clockDivision:
+  TIM1->CR1 &= ~ TIM_CR1_CKD;
+  // Выбор DIV1 в качестве деления частоты тактов:
+  TIM1->CR1 |= TIM_CLOCKDIVISION_DIV1;
+  // Сброс битового поля режима:
+  TIM1->CR1 &= ~( TIM_CR1_DIR | TIM_CR1_CMS);
+  // Выбор счета вверх:
+  TIM1->CR1 |= TIM_COUNTERMODE_UP;
+  // Установка режима PWM1. Сброс бит Output Compare Mode:
+  TIM1->CCMR1 &= ~TIM_CCMR1_OC1M;
+  TIM1->CCMR1 &= ~TIM_CCMR1_CC1S;
+  // Выбор output compare mode 1:
+  TIM1->CCMR1 |= TIM_OCMODE_PWM1;
+  TIM1->CCMR1 |= TIM_CCMR1_OC1PE;
+  // Разрешение автозагрузки Preload:
+  TIM1->CR1 |= TIM_CR1_ARPE;
+  // Разрешение TIM1 DMA Update:
+  TIM1->DIER |= TIM_DMA_UPDATE;
+  // Сброс битовых полей DBA и DBL:
+  TIM1->DCR &= ~TIM_DCR_DBA;
+  TIM1->DCR &= ~TIM_DCR_DBL;
+  // Выбор базового регистра DMA и длины DMA burst:
+  TIM1->DCR = TIM_DMABase_ARR | TIM_DMABurstLength_3Transfers;
+  // Разрешение UEV установкой бита UG для загрузки данных
+  // буфера в регистры предзагрузки:
+  TIM1->EGR |= TIM_EGR_UG;
+  // Ожидание сброса бита UG:
+  while((TIM1->EGR & TIM_EGR_UG) == SET){}
+  // Разрешение UEV установкой бита UG для загрузки данных
+  // из предзагрузки в активные регистры:
+  TIM1->EGR |= TIM_EGR_UG;
+  // Разрешение основного выхода TIM1:
+  TIM1->BDTR |= TIM_BDTR_MOE;
+  // Разрешение вывода CC1:
+  TIM1->CCER |= TIM_CCER_CC1E;
+
+  TIM1->CR1 &= ~TIM_CR1_CEN;
+  /* USER CODE END TIM1_Init 0 */
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
+
+}
 /* TIM6 init function */
 void MX_TIM6_Init(void)
 {
@@ -189,7 +198,37 @@ void MX_TIM8_Init(void)
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
 {
 
-  if(tim_baseHandle->Instance==TIM6)
+  if(tim_baseHandle->Instance==TIM1)
+  {
+  /* USER CODE BEGIN TIM1_MspInit 0 */
+  /* USER CODE END TIM1_MspInit 0 */
+    /* TIM1 clock enable */
+    __HAL_RCC_TIM1_CLK_ENABLE();
+
+    /* TIM1 DMA Init */
+    /* TIM1_CH1 Init */
+    hdma_tim1_ch1.Instance = DMA2_Stream1;
+    hdma_tim1_ch1.Init.Channel = DMA_CHANNEL_6;
+    hdma_tim1_ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_tim1_ch1.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim1_ch1.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_tim1_ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_tim1_ch1.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim1_ch1.Init.Mode = DMA_CIRCULAR;
+    hdma_tim1_ch1.Init.Priority = DMA_PRIORITY_HIGH;
+    hdma_tim1_ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_tim1_ch1) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(tim_baseHandle,hdma[TIM_DMA_ID_CC1],hdma_tim1_ch1);
+
+  /* USER CODE BEGIN TIM1_MspInit 1 */
+
+  /* USER CODE END TIM1_MspInit 1 */
+  }
+  else if(tim_baseHandle->Instance==TIM6)
   {
   /* USER CODE BEGIN TIM6_MspInit 0 */
 
@@ -231,11 +270,52 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
   /* USER CODE END TIM8_MspInit 1 */
   }
 }
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef* timHandle)
+{
+
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  if(timHandle->Instance==TIM1)
+  {
+  /* USER CODE BEGIN TIM1_MspPostInit 0 */
+
+  /* USER CODE END TIM1_MspPostInit 0 */
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /**TIM1 GPIO Configuration
+    PA8     ------> TIM1_CH1
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN TIM1_MspPostInit 1 */
+
+  /* USER CODE END TIM1_MspPostInit 1 */
+  }
+
+}
 
 void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 {
 
-  if(tim_baseHandle->Instance==TIM6)
+  if(tim_baseHandle->Instance==TIM1)
+  {
+  /* USER CODE BEGIN TIM1_MspDeInit 0 */
+
+  /* USER CODE END TIM1_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_TIM1_CLK_DISABLE();
+
+    /* TIM1 DMA DeInit */
+    HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_CC1]);
+  /* USER CODE BEGIN TIM1_MspDeInit 1 */
+
+  /* USER CODE END TIM1_MspDeInit 1 */
+  }
+  else if(tim_baseHandle->Instance==TIM6)
   {
   /* USER CODE BEGIN TIM6_MspDeInit 0 */
 

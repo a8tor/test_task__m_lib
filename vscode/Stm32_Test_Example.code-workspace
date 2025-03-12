@@ -95,7 +95,9 @@
             "sstream": "cpp",
             "charconv": "cpp",
             "format": "cpp",
-            "text_encoding": "cpp"
+            "text_encoding": "cpp",
+            "chrono": "cpp",
+            "iomanip": "cpp"
         },
         "[yaml]": {
             "editor.insertSpaces": true,
